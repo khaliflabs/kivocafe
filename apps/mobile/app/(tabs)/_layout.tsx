@@ -1,7 +1,9 @@
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
 
 import { colors } from '@/src/theme/colors';
+import { fonts } from '@/src/theme/fonts';
 
 const iconSize = 24;
 
@@ -12,13 +14,17 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedText,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        sceneStyle: { backgroundColor: colors.background },
+        tabBarLabelStyle: { fontFamily: fonts.sansMedium, fontSize: 10, letterSpacing: 0.2 },
         tabBarStyle: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.background,
           borderTopColor: colors.border,
-          height: 68,
-          paddingBottom: 8,
-          paddingTop: 6,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          elevation: 0,
+          height: 72,
+          paddingBottom: 9,
+          paddingTop: 7,
+          shadowOpacity: 0,
         },
       }}
     >

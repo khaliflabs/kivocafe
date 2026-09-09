@@ -1,9 +1,9 @@
 import type { PropsWithChildren } from 'react';
-import { ScrollView, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '@/src/theme/colors';
-import { spacing } from '@/src/theme/spacing';
+import { layout } from '@/src/theme/spacing';
 
 type ScreenContainerProps = PropsWithChildren<{
   contentContainerStyle?: StyleProp<ViewStyle>;
@@ -21,7 +21,7 @@ export function ScreenContainer({ children, contentContainerStyle, scroll = fals
     );
   }
 
-  return <SafeAreaView style={[styles.safeArea, styles.content, contentContainerStyle]} edges={['top']}>{children}</SafeAreaView>;
+  return <SafeAreaView style={styles.safeArea} edges={['top']}><View style={[styles.content, styles.fill, contentContainerStyle]}>{children}</View></SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
@@ -30,6 +30,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.lg,
+    alignSelf: 'center',
+    maxWidth: layout.maxContentWidth,
+    padding: layout.screenPadding,
+    width: '100%',
   },
+  fill: { flex: 1 },
 });
