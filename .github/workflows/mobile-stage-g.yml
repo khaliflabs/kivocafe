@@ -1,0 +1,201 @@
+name: KIVO Mobile Stage G
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-stage-g.yml'
+      - '.github/actions/**'
+      - 'package.json'
+      - 'package-lock.json'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-stage-g.yml'
+      - '.github/actions/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  validate:
+    name: Validate exact mobile source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/mobile
+
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify and record source identity
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ github.ref }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+        run: |
+          set -euo pipefail
+          checked_out_sha="$(git rev-parse HEAD)"
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$checked_out_sha" = "$SOURCE_SHA"
+          printf 'repository=%s\nsource_sha=%s\nref=%s\nevent=%s\nworkflow=%s\nrun_id=%s\nrun_attempt=%s\n' \
+            "$REPOSITORY" "$SOURCE_SHA" "$SOURCE_REF" "$EVENT_NAME" "$WORKFLOW_NAME" "$RUN_ID" "$RUN_ATTEMPT"
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Expo Doctor
+        run: npx --no-install expo-doctor
+
+      - name: Validate public Expo configuration
+        run: |
+          set -euo pipefail
+          config_path="$RUNNER_TEMP/kivo-expo-public-config.json"
+          npx --no-install expo config --type public --json > "$config_path"
+          node - "$config_path" <<'NODE'
+          const fs = require('node:fs');
+          const config = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (config.name !== 'KIVO Café' || config.slug !== 'kivo-cafe') {
+            console.error('Resolved Expo application identity does not match KIVO Café / kivo-cafe.');
+            process.exit(1);
+          }
+          console.log(`Validated Expo identity: ${config.name} (${config.slug})`);
+          NODE
+
+      - name: Audit dependencies for high or critical vulnerabilities
+        run: npm audit --audit-level=high
+
+      - name: Reject tracked runtime secret files
+        working-directory: .
+        run: |
+          set -euo pipefail
+          blocked=0
+          while IFS= read -r -d '' path; do
+            base="${path##*/}"
+            case "$base" in
+              *.example|*.sample)
+                continue
+                ;;
+              .env|.env.*|*.pem|*.key|*.p12|*.pfx|id_rsa|id_ed25519|credentials.json|service-account.json|google-services.json|GoogleService-Info.plist)
+                echo "Disallowed tracked secret-bearing filename: $path" >&2
+                blocked=1
+                ;;
+            esac
+          done < <(git ls-files -z)
+          test "$blocked" -eq 0
+
+      - name: Install pinned Gitleaks
+        run: |
+          set -euo pipefail
+          version='8.30.1'
+          archive="$RUNNER_TEMP/gitleaks_${version}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz" \
+            --output "$archive"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $archive" | sha256sum --check --status
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      - name: Scan repository with Gitleaks
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/gitleaks" git "$GITHUB_WORKSPACE" --no-banner --redact
+
+      - name: Export iOS application bundle
+        env:
+          CI: '1'
+        run: |
+          set -euo pipefail
+          export_path="$RUNNER_TEMP/kivo-stage-g-export"
+          npx --no-install expo export --platform ios --output-dir "$export_path" --clear
+          test -d "$export_path/_expo/static/js/ios"
+          test -n "$(find "$export_path/_expo/static/js/ios" -type f -print -quit)"
+
+      - name: Verify Git integrity
+        working-directory: .
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff --quiet
+          git diff --cached --quiet
+
+      - name: Generate Stage G receipt
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ github.ref }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+        run: |
+          set -euo pipefail
+          receipt_path="$RUNNER_TEMP/stage-g-receipt.json"
+          node <<'NODE' > "$receipt_path"
+          const receipt = {
+            schema_version: 1,
+            repository: process.env.REPOSITORY,
+            source_sha: process.env.SOURCE_SHA,
+            ref: process.env.SOURCE_REF,
+            event: process.env.EVENT_NAME,
+            workflow: process.env.WORKFLOW_NAME,
+            run_id: process.env.RUN_ID,
+            run_attempt: process.env.RUN_ATTEMPT,
+            node_version: process.version,
+            npm_version: require('node:child_process').execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(),
+            expo_version: require('expo/package.json').version,
+            react_native_version: require('react-native/package.json').version,
+            validation: {
+              dependency_install: 'passed',
+              source_identity: 'passed',
+              typecheck: 'passed',
+              lint: 'passed',
+              expo_doctor: 'passed',
+              expo_config: 'passed',
+              security_audit: 'passed',
+              secret_scan: 'passed',
+              expo_export: 'passed',
+              git_integrity: 'passed'
+            }
+          };
+          process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
+          NODE
+          node -e "const r=require(process.argv[1]); if(r.source_sha!==process.env.SOURCE_SHA) process.exit(1)" "$receipt_path"
+
+      - name: Upload Stage G receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kivo-mobile-stage-g-${{ env.SOURCE_SHA }}
+          path: ${{ runner.temp }}/stage-g-receipt.json
+          if-no-files-found: error
+          retention-days: 30
