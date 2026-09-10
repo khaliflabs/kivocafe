@@ -8,7 +8,28 @@ The canonical source identity is a full Git commit SHA. A successful run emits a
 
 Automated application tests are not yet present. Add a required `npm test` step to Stage G when a test suite is introduced.
 
+## iOS development preview — Expo Go
+
+Flow: clean Stage G-approved source SHA → Expo Go → visual/manual testing. Expo Go is a development preview, not an EAS build, TestFlight release, or Stage H release artifact.
+
+Before each review, fetch `origin/main`, confirm the working tree is clean and `HEAD` equals `origin/main`, and verify a successful Stage G PUSH and receipt for that exact SHA. The existing gate can verify this without invoking EAS: from `apps/mobile`, run `node scripts/stage-h-gate.mjs "$(git rev-parse HEAD)"`; it requires GitHub CLI read access to KIVO Actions/artifacts. If proof is missing, stop. Any source edit invalidates the approved preview until committed and revalidated by Stage G.
+
+After `npm ci`, `npm run lint`, `npm run typecheck`, and `npx expo-doctor` pass, start as the `kivo` user:
+
+```bash
+cd /home/kivo/projects/kivocafe/apps/mobile
+npm run start:go:tunnel
+```
+
+The remote tools server is not on the iPhone's LAN, so use Expo's tunnel; no inbound firewall or SSH changes are needed. The tools server has the official helper installed outside application dependencies with `npm install --global @expo/ngrok@4.1.3` (one-time server setup). Keep the terminal open, or run inside `tmux new -s kivo-expo-go`; reattach with `tmux attach -t kivo-expo-go`. Stop with Ctrl+C when review is finished. Tunnel addresses can change after restart and should be shared only with reviewers; never run the preview with Doppler secrets injected.
+
+Install/update Expo Go on the iPhone and sign in with the same Expo account as the CLI (`khalif27`; verify with `npx expo whoami`). The App Store Expo Go supports SDK 57 and requires matching CLI/app login; see [Expo's SDK 57 login notice](https://expo.dev/changelog/expo-go-57-login). Scan the terminal QR using the iPhone Camera and open Expo Go. Review the KIVO wordmark, cream/espresso/gold styling, Home, Menu, Orders, Rewards, and Profile. App icon/native splash configuration is not faithfully represented by Expo Go; native identity/signing remains an EAS-build concern.
+
+`npm run start:go` uses the default connection mode; `npm run start:go:lan` is only for devices that can actually reach the server on a trusted LAN. No custom development client or extra application dependency is needed for the current UI.
+
 ## Stage H — internal builds
+
+Current status: an Android `preview` internal build has succeeded with verified source identity. Signed iOS Stage H builds are intentionally deferred until Apple Developer signing is ready. Expo Go review does not remove that prerequisite or produce a combined Stage H success receipt.
 
 Manually dispatch `KIVO Mobile Stage H` from `main` with a full lowercase 40-character `source_sha` and `platform` (`all`, `android`, or `ios`). Stage H verifies a completed successful Stage G **push to main** for that SHA and downloads the matching unexpired receipt. Repository, workflow ID/path, run ID/attempt, artifact identity, source SHA, and every mandatory validation must match. A missing or expired receipt blocks builds; rerun Stage G for the source if needed.
 
