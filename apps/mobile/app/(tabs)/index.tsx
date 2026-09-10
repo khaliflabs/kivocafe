@@ -1,7 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { ProductCard } from '@/components/menu/ProductCard';
+import { menuItems } from '@/src/menu/menuData';
 
 import { BrandDivider } from '@/components/brand/BrandDivider';
-import { KivoEmblem } from '@/components/brand/KivoEmblem';
 import { KivoWordmark } from '@/components/brand/KivoWordmark';
 import { KivoButton } from '@/components/ui/KivoButton';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -21,15 +23,13 @@ export default function HomeScreen() {
       <View style={styles.welcome}>
         <Text style={styles.eyebrow}>WELCOME TO KIVO</Text>
         <Text style={styles.welcomeTitle}>Your café moment,<Text style={styles.italic}> made with care.</Text></Text>
-        <KivoButton label="ORDER NOW" />
+        <KivoButton label="ORDER NOW" onPress={() => router.push('/(tabs)/menu')} />
       </View>
       <View style={styles.sections}>
         <View style={styles.section}>
           <SectionHeader title="Featured" />
-          <View style={styles.featureCard}>
-            <View style={styles.featureCopy}><Text style={styles.cardEyebrow}>A KIVO FAVOURITE</Text><Text style={styles.featureTitle}>Something special is brewing.</Text><Text style={styles.cardBody}>Our featured café selection will be revealed here soon.</Text></View>
-            <KivoEmblem size={78} />
-          </View>
+          <ProductCard item={menuItems.find(item => item.id === 'king-ferrero')!} />
+          <Text style={styles.smallCopy}>Representative photography. Discover the full selection in Menu.</Text>
         </View>
         <View style={styles.section}>
           <SectionHeader title="Favourites" />

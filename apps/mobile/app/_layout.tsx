@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { colors } from '@/src/theme/colors';
+import { MenuCartProvider } from '@/src/menu/MenuCart';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -17,7 +18,7 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <>
+    <MenuCartProvider>
       <Stack
         screenOptions={{
           contentStyle: { backgroundColor: colors.background },
@@ -27,6 +28,6 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
       </Stack>
       <StatusBar style="dark" />
-    </>
+    </MenuCartProvider>
   );
 }

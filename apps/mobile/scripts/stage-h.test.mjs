@@ -34,6 +34,7 @@ const changes = {
   'wrong receipt run': e => { e.receipt.run_id = '999'; },
   'stale attempt receipt': e => { e.receipt.run_attempt = '2'; },
   'missing validation': e => { delete e.receipt.validation.secret_scan; },
+  'missing menu tests': e => { delete e.receipt.validation.tests; },
   'failed validation': e => { e.receipt.validation.expo_export = 'failed'; },
 };
 for (const [name, change] of Object.entries(changes)) {

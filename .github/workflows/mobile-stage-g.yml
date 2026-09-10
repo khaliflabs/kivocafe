@@ -75,11 +75,13 @@ jobs:
       - name: ESLint
         run: npm run lint
 
+      - name: Menu and provenance tests
+        run: npm test
+
       - name: Validate Stage H controller
         run: |
           set -euo pipefail
           npx --no-install eslint scripts
-          node --test scripts/stage-h.test.mjs
 
       - name: Expo Doctor
         run: npx --no-install expo-doctor
@@ -186,6 +188,7 @@ jobs:
               source_identity: 'passed',
               typecheck: 'passed',
               lint: 'passed',
+              tests: 'passed',
               expo_doctor: 'passed',
               expo_config: 'passed',
               security_audit: 'passed',

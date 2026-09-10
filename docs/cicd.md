@@ -6,7 +6,11 @@
 
 The canonical source identity is a full Git commit SHA. A successful run emits a 30-day `kivo-mobile-stage-g-<FULL_SHA>` artifact containing `stage-g-receipt.json`, which binds that SHA to the repository, GitHub run, toolchain versions, and successful checks. Stage G has read-only repository permission and deploys nothing.
 
-Automated application tests are not yet present. Add a required `npm test` step to Stage G when a test suite is introduced.
+`npm test` is mandatory in Stage G: lightweight Node tests cover menu integrity, exact GBP prices, variants, lookup, search, quantity arithmetic, local draft behavior, and Stage H provenance guards. The receipt records `tests: passed`. UI/device acceptance remains manual.
+
+## KIVO 0.2 — local menu
+
+The menu contains 49 products in 11 categories, sourced from the supplied printed-menu prices. `src/menu` centralizes types, data, image references, price/search logic and a session-only React context draft. Product routes are `app/product/[id].tsx`; unknown IDs show a safe menu return. The Orders tab shows only a local draft, not order history or a submitted order. There is no backend, checkout or payment. Unconfirmed sauce options remain empty and explicitly marked as coming soon. Ten local reference photographs are credited in `apps/mobile/assets/products/ATTRIBUTION.md` and labelled as representative in the UI; they are not KIVO photographs.
 
 ## iOS development preview — Expo Go
 
