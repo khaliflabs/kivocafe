@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const repository = 'khaliflabs/kivocafe';
-export const checks = ['dependency_install', 'source_identity', 'typecheck', 'lint', 'tests', 'expo_doctor', 'expo_config', 'security_audit', 'secret_scan', 'expo_export', 'git_integrity'];
+export const checks = ['dependency_install', 'source_identity', 'typecheck', 'lint', 'tests', 'expo_doctor', 'expo_config', 'security_audit', 'secret_scan', 'expo_export', 'git_integrity', 'backend_dependency_install', 'backend_typecheck', 'backend_lint', 'backend_tests', 'migration_rls_tests', 'backend_security_audit'];
 export function validateSha(sha) {
   assert.match(sha ?? '', /^[0-9a-f]{40}$/, 'source_sha must be a full lowercase Git SHA');
 }

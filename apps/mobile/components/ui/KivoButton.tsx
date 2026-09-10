@@ -7,15 +7,18 @@ import { typography } from '@/src/theme/typography';
 type KivoButtonProps = {
   label: string;
   onPress?: () => void;
+  disabled?: boolean;
   variant?: 'primary' | 'secondary';
 };
 
-export function KivoButton({ label, onPress, variant = 'primary' }: KivoButtonProps) {
+export function KivoButton({ label, onPress, disabled = false, variant = 'primary' }: KivoButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      disabled={disabled}
+      accessibilityState={{ disabled }}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, styles[variant], pressed && styles.pressed]}
+      style={({ pressed }) => [styles.button, styles[variant], (pressed || disabled) && styles.pressed]}
     >
       <Text style={[styles.label, variant === 'secondary' && styles.secondaryLabel]}>{label}</Text>
     </Pressable>

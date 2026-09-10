@@ -8,6 +8,8 @@ import 'react-native-reanimated';
 
 import { colors } from '@/src/theme/colors';
 import { MenuCartProvider } from '@/src/menu/MenuCart';
+import { AuthProvider } from '@/src/backend/AuthProvider';
+import { PaymentProvider } from '@/src/backend/PaymentProvider';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -18,7 +20,7 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <MenuCartProvider>
+    <AuthProvider><PaymentProvider><MenuCartProvider>
       <Stack
         screenOptions={{
           contentStyle: { backgroundColor: colors.background },
@@ -28,6 +30,6 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
       </Stack>
       <StatusBar style="dark" />
-    </MenuCartProvider>
+    </MenuCartProvider></PaymentProvider></AuthProvider>
   );
 }

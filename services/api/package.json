@@ -1,0 +1,35 @@
+{
+  "name": "kivo-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "node --experimental-strip-types --watch src/index.ts",
+    "start": "node --experimental-strip-types src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests scripts",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:seed": "node --experimental-strip-types scripts/seed.mjs"
+  },
+  "dependencies": {
+    "@fastify/rate-limit": "11.2.0",
+    "@supabase/supabase-js": "2.116.0",
+    "fastify": "5.12.3",
+    "pg": "8.23.0",
+    "stripe": "22.6.2",
+    "zod": "4.6.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@eslint/js": "9.39.5",
+    "@types/node": "22.20.2",
+    "eslint": "9.39.5",
+    "globals": "17.12.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0"
+  }
+}

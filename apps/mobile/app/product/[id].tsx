@@ -163,17 +163,18 @@ function ProductDetail({ product }: { product: MenuItem }) {
         </View>
       </View>
       <KivoButton
-        label={`ADD TO ORDER — ${formatGBP(quantityTotal(price, quantity))}`}
+        label={`ADD TO CART — ${formatGBP(quantityTotal(price, quantity))}`}
+        disabled={!cart.ready}
         onPress={() => {
           if (existing + quantity > 99) {
             setMessage(
-              "Your draft can hold up to 99 of each selection. Adjust it in Orders.",
+              "Your cart can hold up to 99 of each selection. Checkout permits 20 per selection.",
             );
             return;
           }
           cart.add({ productId: product.id, variantId: variant, quantity });
           setMessage(
-            `${quantity} × ${product.name} added to your local draft. Nothing has been sent.`,
+            `${quantity} × ${product.name} added to your cart. Nothing has been ordered yet.`,
           );
         }}
       />
@@ -183,16 +184,15 @@ function ProductDetail({ product }: { product: MenuItem }) {
             {message}
           </Text>
           <KivoButton
-            label="VIEW LOCAL DRAFT"
+            label="VIEW CART"
             variant="secondary"
-            onPress={() => router.push("/(tabs)/orders")}
+            onPress={() => router.push('/cart')}
           />
         </View>
       )}
       <Text style={styles.note}>
-        Local preview only. No checkout or payment. Your draft resets when the
-        app restarts. Ask the café about ingredients and allergens before
-        ordering.
+        Saved on this device. Final prices are confirmed at checkout. Ask the
+        café about ingredients and allergens before ordering. Test payments only.
       </Text>
     </ScreenContainer>
   );

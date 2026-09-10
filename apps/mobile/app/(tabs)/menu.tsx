@@ -1,4 +1,7 @@
 import { useMemo, useRef, useState } from "react";
+import { router } from 'expo-router';
+import { KivoButton } from '@/components/ui/KivoButton';
+import { useMenuCart } from '@/src/menu/MenuCart';
 import {
   FlatList,
   Pressable,
@@ -20,6 +23,7 @@ import { layout, spacing } from "@/src/theme/spacing";
 import { typography } from "@/src/theme/typography";
 const tabs = [{ id: "popular", name: "Popular" }, ...menuCategories];
 export default function MenuScreen() {
+  const cart=useMenuCart();
   const [category, setCategory] = useState("popular");
   const [query, setQuery] = useState("");
   const list = useRef<FlatList<MenuItem>>(null);
@@ -36,6 +40,7 @@ export default function MenuScreen() {
         <Text style={styles.support}>
           A little indulgence. A moment for you.
         </Text>
+        <KivoButton label={`CART · ${cart.lines.reduce((n,l)=>n+l.quantity,0)}`} variant="secondary" onPress={()=>router.push('/cart')}/>
         <View style={styles.searchRow}>
           <TextInput
             value={query}

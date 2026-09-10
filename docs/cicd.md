@@ -2,7 +2,7 @@
 
 ## Stage G — validation
 
-`KIVO Mobile Stage G` runs for relevant pull requests, relevant pushes to `main`, and manual dispatches. It installs the locked mobile dependencies and validates TypeScript, ESLint, Expo Doctor, the public Expo application identity, high/critical dependency advisories, committed secrets, an iOS Expo export, and Git integrity.
+`KIVO Mobile Stage G` is the repository validation gate, retaining its existing status-check name. It runs for relevant pull requests, pushes to `main`, and manual dispatches, including changes to `services/api`, `supabase`, mobile, docs and CI. It installs both lockfiles and validates mobile/backend types, lint, tests and dependency audits, plus Expo Doctor, Expo identity, secret scanning, iOS export and Git integrity. No Doppler or real payment/database credentials enter Stage G.
 
 The canonical source identity is a full Git commit SHA. A successful run emits a 30-day `kivo-mobile-stage-g-<FULL_SHA>` artifact containing `stage-g-receipt.json`, which binds that SHA to the repository, GitHub run, toolchain versions, and successful checks. Stage G has read-only repository permission and deploys nothing.
 
@@ -10,7 +10,34 @@ The canonical source identity is a full Git commit SHA. A successful run emits a
 
 ## KIVO 0.2 — local menu
 
-The menu contains 49 products in 11 categories, sourced from the supplied printed-menu prices. `src/menu` centralizes types, data, image references, price/search logic and a session-only React context draft. Product routes are `app/product/[id].tsx`; unknown IDs show a safe menu return. The Orders tab shows only a local draft, not order history or a submitted order. There is no backend, checkout or payment. Unconfirmed sauce options remain empty and explicitly marked as coming soon. Ten local reference photographs are credited in `apps/mobile/assets/products/ATTRIBUTION.md` and labelled as representative in the UI; they are not KIVO photographs.
+The menu contains 49 products in 11 categories, sourced from the printed-menu prices. Local catalogue and representative image assets remain available offline. Ten photographs are credited in `apps/mobile/assets/products/ATTRIBUTION.md`; none is presented as an actual KIVO product photograph. KIVO 0.3 adds a persisted cart, authenticated history and server-priced checkout; unknown mandatory sauce choices still block checkout rather than inventing modifiers.
+
+## KIVO 0.3 — backend and test payments
+
+`services/api` uses Fastify, Zod, Supabase and Stripe. Additive migrations and the
+deterministic exact-price seed are under `supabase` and `services/api/scripts`.
+PostgreSQL-backed tests execute migrations and RLS without real account credentials.
+The Stage G receipt now additionally requires `backend_dependency_install`,
+`backend_typecheck`, `backend_lint`, `backend_tests`, `migration_rls_tests` and
+`backend_security_audit`. Stage H verifies these fields too; older receipts must be
+revalidated rather than treated as backend approval.
+
+Mobile → authenticated API → server-priced Supabase order → Stripe PaymentSheet →
+verified Stripe webhook → paid order. Card entry goes directly to Stripe, not KIVO.
+Payment creation and webhook processing fail closed while the real
+`kivo/stg/STRIPE_WEBHOOK_SECRET` is absent. No production deployment or Stage I was added.
+
+For public-only staging auth configuration, an operator authenticated to Doppler can
+run `node scripts/preview-staging.mjs` from `apps/mobile`. It selects only the three
+public aliases and excludes server secrets from Metro's environment. Optionally set
+`EXPO_PUBLIC_API_URL` to an approved staging HTTPS endpoint; none has been deployed
+by this milestone. The existing plain Expo Go command still supports offline UI review.
+
+Stripe SDK 0.64.0 is Expo SDK 57-compatible. PaymentSheet is guarded by native-module
+and test-publishable-key availability; web has a separate non-native fallback.
+Apple Pay/Google Pay are disabled, and iOS signing remains deferred. No new EAS build
+was attempted. See `docs/security-payments.md` and `services/api/README.md` for the
+security model, local run commands and real-webhook activation boundary.
 
 ## iOS development preview — Expo Go
 

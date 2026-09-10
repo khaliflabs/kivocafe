@@ -1,138 +1,157 @@
-import { router } from "expo-router";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { FlatList, Text, View } from "react-native";
 import { BrandDivider } from "@/components/brand/BrandDivider";
 import { KivoEmblem } from "@/components/brand/KivoEmblem";
 import { KivoButton } from "@/components/ui/KivoButton";
 import { ScreenContainer } from "@/components/ui/ScreenContainer";
+import { useAuth } from "@/src/backend/AuthProvider";
+import { api } from "@/src/backend/client";
+import { parseOrder, type OrderDTO } from "@/src/backend/contracts";
 import { useMenuCart } from "@/src/menu/MenuCart";
-import {
-  formatGBP,
-  getProduct,
-  quantityTotal,
-  unitPrice,
-} from "@/src/menu/menuLogic";
-import { colors } from "@/src/theme/colors";
-import { spacing } from "@/src/theme/spacing";
+import { formatGBP } from "@/src/menu/menuLogic";
 import { typography } from "@/src/theme/typography";
+import { colors } from "@/src/theme/colors";
 export default function OrdersScreen() {
-  const { lines, remove } = useMenuCart();
-  const total =
-    lines.reduce(
-      (pence, line) =>
-        pence +
-        Math.round(
-          quantityTotal(
-            unitPrice(getProduct(line.productId)!, line.variantId),
-            line.quantity,
-          ) * 100,
-        ),
-      0,
-    ) / 100;
+  const { session } = useAuth();
+  const cart = useMenuCart();
+  const [orders, setOrders] = useState<OrderDTO[]>([]);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setOrders([]);
+      setMessage("");
+      if (session) {
+        setLoading(true);
+        void api<{ orders: unknown[] }>("/orders")
+          .then((r) => {
+            if (active) setOrders(r.orders.map(parseOrder));
+          })
+          .catch(() => {
+            if (active)
+              setMessage(
+                "Order history is unavailable. Please refresh when the staging API is connected.",
+              );
+          })
+          .finally(() => {
+            if (active) setLoading(false);
+          });
+      }
+      return () => {
+        active = false;
+      };
+    }, [session]),
+  );
+  async function refresh() {
+    setLoading(true);
+    try {
+      const r = await api<{ orders: unknown[] }>("/orders");
+      setOrders(r.orders.map(parseOrder));
+      setMessage("");
+    } catch {
+      setMessage("Unable to refresh orders.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function cancel(id: string) {
+    try {
+      await api(`/orders/${id}/cancel`, {});
+      await refresh();
+    } catch {
+      setMessage("This order cannot be cancelled right now.");
+    }
+  }
   return (
     <ScreenContainer>
       <FlatList
-        data={lines}
-        keyExtractor={(line) => `${line.productId}:${line.variantId ?? ""}`}
+        data={orders}
+        keyExtractor={(o) => o.id}
+        refreshing={loading}
+        onRefresh={session ? () => void refresh() : undefined}
         ListHeaderComponent={
-          <View style={styles.header}>
+          <View style={{ gap: 20, paddingBottom: 24 }}>
             <KivoEmblem size={52} />
-            <Text accessibilityRole="header" style={typography.pageTitle}>
-              Your local draft
-            </Text>
-            <Text style={styles.note}>
-              Not an order. Nothing is sent or paid for. This draft resets when
-              the app restarts.
-            </Text>
+            <Text style={typography.pageTitle}>Your orders</Text>
+            <Text style={typography.body}>Café moments, made with care.</Text>
+            <KivoButton
+              label={`VIEW CART · ${cart.lines.reduce((n, l) => n + l.quantity, 0)}`}
+              onPress={() => router.push("/cart")}
+            />
             <BrandDivider botanical />
-          </View>
-        }
-        renderItem={({ item: line }) => {
-          const item = getProduct(line.productId)!;
-          return (
-            <View style={styles.row}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`View ${item.name}`}
-                onPress={() =>
-                  router.push({
-                    pathname: "/product/[id]",
-                    params: { id: item.id },
-                  })
-                }
-              >
-                <Text style={typography.body}>
-                  {line.quantity} × {item.name}
-                </Text>
-              </Pressable>
-              <Text style={styles.note}>
-                {
-                  item.variants?.find(
-                    (variant) => variant.id === line.variantId,
-                  )?.name
-                }
-                {item.optionGroups?.length ? "Sauce not selected" : ""}
-              </Text>
-              <View style={styles.bottom}>
-                <Text style={typography.body}>
-                  {formatGBP(
-                    quantityTotal(
-                      unitPrice(item, line.variantId),
-                      line.quantity,
-                    ),
-                  )}
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove ${item.name} from draft`}
-                  onPress={() => remove(line)}
-                  style={styles.remove}
-                >
-                  <Text style={styles.note}>Remove</Text>
-                </Pressable>
-              </View>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
-          <Text style={styles.note}>
-            Your next café moment starts in the menu.
-          </Text>
-        }
-        ListFooterComponent={
-          <View style={styles.header}>
-            {lines.length > 0 && (
-              <Text style={typography.sectionTitle}>
-                Draft total {formatGBP(total)}
+            {!session && (
+              <KivoButton
+                label="SIGN IN FOR ORDER HISTORY"
+                onPress={() => router.push("/auth")}
+              />
+            )}{" "}
+            {!!message && (
+              <Text accessibilityRole="alert" style={typography.body}>
+                {message}
               </Text>
             )}
-            <KivoButton
-              label="EXPLORE MENU"
-              onPress={() => router.push("/(tabs)/menu")}
-            />
           </View>
         }
+        ListEmptyComponent={
+          <Text style={typography.body}>
+            {loading
+              ? "Loading your orders…"
+              : session
+                ? "Your orders will appear here."
+                : "Your cart is available without signing in."}
+          </Text>
+        }
+        renderItem={({ item: o }) => (
+          <View
+            style={{
+              paddingVertical: 20,
+              gap: 12,
+              borderBottomWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text style={typography.caption}>
+              {["collected", "cancelled", "refunded"].includes(o.status)
+                ? "PREVIOUS ORDER"
+                : "ACTIVE ORDER"}
+            </Text>
+            <Text style={typography.sectionTitle}>
+              KIVO · {o.id.slice(0, 8).toUpperCase()}
+            </Text>
+            <Text style={typography.body}>
+              {new Date(o.created_at).toLocaleDateString("en-GB")} ·{" "}
+              {formatGBP(o.total_pence / 100)}
+            </Text>
+            <Text style={typography.body}>
+              {o.status
+                .replaceAll("_", " ")
+                .replace(/^./, (s) => s.toUpperCase())}
+            </Text>
+            {["draft", "payment_pending", "payment_failed"].includes(
+              o.status,
+            ) && (
+              <>
+                <KivoButton
+                  label="VIEW / RESUME PAYMENT"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/checkout",
+                      params: { orderId: o.id },
+                    })
+                  }
+                />
+                <KivoButton
+                  label="CANCEL ORDER"
+                  variant="secondary"
+                  onPress={() => void cancel(o.id)}
+                />
+              </>
+            )}
+          </View>
+        )}
       />
     </ScreenContainer>
   );
 }
-const styles = StyleSheet.create({
-  header: { gap: spacing.lg, paddingVertical: spacing.lg },
-  note: { ...typography.body, color: colors.mutedText, fontSize: 13 },
-  row: {
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    gap: spacing.sm,
-  },
-  bottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  remove: {
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    justifyContent: "center",
-  },
-});

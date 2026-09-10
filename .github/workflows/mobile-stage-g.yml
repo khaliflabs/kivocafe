@@ -3,6 +3,9 @@ name: KIVO Mobile Stage G
 on:
   pull_request:
     paths:
+      - 'services/api/**'
+      - 'supabase/**'
+      - 'docs/**'
       - 'apps/mobile/**'
       - '.github/workflows/**'
       - '.github/actions/**'
@@ -12,6 +15,9 @@ on:
     branches:
       - main
     paths:
+      - 'services/api/**'
+      - 'supabase/**'
+      - 'docs/**'
       - 'apps/mobile/**'
       - '.github/workflows/**'
       - '.github/actions/**'
@@ -48,10 +54,25 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/mobile/package-lock.json
+          cache-dependency-path: |
+            apps/mobile/package-lock.json
+            services/api/package-lock.json
 
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Backend locked dependencies
+        working-directory: services/api
+        run: npm ci
+
+      - name: Backend types, lint, API and PostgreSQL security tests
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          npm run typecheck
+          npm run lint
+          npm test
+          npm audit --audit-level=high
 
       - name: Verify and record source identity
         env:
@@ -189,6 +210,12 @@ jobs:
               typecheck: 'passed',
               lint: 'passed',
               tests: 'passed',
+              backend_dependency_install: 'passed',
+              backend_typecheck: 'passed',
+              backend_lint: 'passed',
+              backend_tests: 'passed',
+              migration_rls_tests: 'passed',
+              backend_security_audit: 'passed',
               expo_doctor: 'passed',
               expo_config: 'passed',
               security_audit: 'passed',
