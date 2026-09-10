@@ -24,8 +24,11 @@ revalidated rather than treated as backend approval.
 
 Mobile → authenticated API → server-priced Supabase order → Stripe PaymentSheet →
 verified Stripe webhook → paid order. Card entry goes directly to Stripe, not KIVO.
-Payment creation and webhook processing fail closed while the real
-`kivo/stg/STRIPE_WEBHOOK_SECRET` is absent. No production deployment or Stage I was added.
+Local test payment creation and real signed Stripe CLI webhook processing were
+validated on 2026-09-10, including authoritative pricing, retry/delivery idempotency
+and cancellation. Missing signing configuration still fails closed. No production
+deployment or Stage I was added. This account-backed test is an explicit operator
+operation; Stage G continues using only isolated SQL tests and mocked Stripe calls.
 
 For public-only staging auth configuration, an operator authenticated to Doppler can
 run `node scripts/preview-staging.mjs` from `apps/mobile`. It selects only the three
@@ -37,7 +40,12 @@ Stripe SDK 0.64.0 is Expo SDK 57-compatible. PaymentSheet is guarded by native-m
 and test-publishable-key availability; web has a separate non-native fallback.
 Apple Pay/Google Pay are disabled, and iOS signing remains deferred. No new EAS build
 was attempted. See `docs/security-payments.md` and `services/api/README.md` for the
-security model, local run commands and real-webhook activation boundary.
+security model and persistent `kivo-api-stg` / `kivo-stripe-listener` operating
+commands. The API remains loopback-only; an iPhone cannot use it until an approved
+reachable API endpoint is configured. Non-payment Expo Go review remains available;
+manual native PaymentSheet acceptance is still outstanding. The CLI signing secret
+is only for local forwarding; future deployed endpoints require their own Stripe
+dashboard signing secrets. Production remains disabled.
 
 ## iOS development preview — Expo Go
 

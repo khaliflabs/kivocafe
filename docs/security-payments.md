@@ -14,7 +14,7 @@ the merchant's applicable compliance assessment.
 
 ## Secrets and authentication
 
-Backend: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY` and later
+Backend: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY` and
 `STRIPE_WEBHOOK_SECRET`. Migration tools alone need `SUPABASE_DB_PASSWORD`.
 All come from Doppler `kivo/stg`; no `.env`, source or GitHub application secrets.
 Stage H continues to use its existing narrow GitHub `DOPPLER_TOKEN` bootstrap.
@@ -78,9 +78,20 @@ the actual migrations and RLS policies using isolated PGlite databases.
 
 Only test-mode keys are accepted. No live charge, production deployment, production
 DNS, wallet activation, Apple signing or store submission is part of this milestone.
-The real webhook signing secret must be obtained from a Stripe test-mode endpoint
-or authenticated Stripe CLI listener and saved directly into Doppler as
-`kivo/stg/STRIPE_WEBHOOK_SECRET`, never pasted into chat.
+The real CLI signing secret is present in `kivo/stg/STRIPE_WEBHOOK_SECRET`.
+On 2026-09-10, a real test PaymentIntent confirmed with `pm_card_visa` produced a
+Stripe-signed CLI success event, then a persisted paid order/succeeded payment.
+A separate real cancellation event passed. Duplicate handling used an SDK-signed
+replay of the same retrieved event after the genuine delivery; no duplicate rows
+or reward effects occurred. Temporary customer/order/payment fixtures were removed;
+Stripe test objects and processed-event tombstones remain for audit and deduplication.
+
+The local runtime wrapper filters listener stdout/stderr before terminal capture,
+compares the existing signing secret without printing it, and never dumps secrets.
+CLI forwarding is local staging/dev validation, not a deployed webhook endpoint.
+Future deployed endpoints require their own dashboard signing secrets: never
+substitute a CLI signing secret for a dashboard secret. No production activation
+or manual PaymentSheet device acceptance is implied by this backend validation.
 
 References: [Stripe PaymentSheet](https://docs.stripe.com/payments/mobile/accept-payment?platform=react-native&type=payment),
 [Stripe webhook signatures](https://docs.stripe.com/webhooks?lang=node),
