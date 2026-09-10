@@ -8,9 +8,11 @@
     "scheme": "kivo-cafe",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "com.khaliflabs.kivocafe",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.khaliflabs.kivocafe",
       "adaptiveIcon": {
         "backgroundColor": "#F6EFE5",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -37,6 +39,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "90aaa97b-231b-4ba9-84a6-77407df18c26"
+      }
+    },
+    "owner": "khalif27s-team"
   }
 }

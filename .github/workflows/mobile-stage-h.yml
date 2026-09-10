@@ -1,0 +1,97 @@
+name: KIVO Mobile Stage H
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full 40-character Stage G-approved source SHA
+        required: true
+        type: string
+      platform:
+        description: Internal build platforms
+        required: true
+        type: choice
+        default: all
+        options: [all, ios, android]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: kivo-stage-h-${{ inputs.source_sha }}
+  cancel-in-progress: false
+
+jobs:
+  internal-build:
+    name: Gate and build approved source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    environment: mobile-internal
+    env:
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      BUILD_PLATFORM: ${{ inputs.platform }}
+      CI: '1'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Validate invocation
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'khaliflabs/kivocafe'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          case "$BUILD_PLATFORM" in all|ios|android) ;; *) exit 1 ;; esac
+
+      # The controller is pinned to the workflow's commit, never supplied by input.
+      - name: Check out trusted Stage H controller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: controller
+          persist-credentials: false
+
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Verify exact Stage G PUSH and receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node controller/apps/mobile/scripts/stage-h-gate.mjs "$SOURCE_SHA" "$RUNNER_TEMP/stage-g-proof.json"
+
+      - name: Check out approved source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Verify checkout and install dependencies
+        working-directory: source/apps/mobile
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          npm ci
+          git diff --exit-code
+
+      - name: Authenticate to Doppler and build internal artifacts
+        working-directory: source/apps/mobile
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          set -euo pipefail
+          node "$GITHUB_WORKSPACE/controller/apps/mobile/scripts/stage-h-build.mjs" \
+            "$SOURCE_SHA" "$BUILD_PLATFORM" "$RUNNER_TEMP/stage-g-proof.json" "$RUNNER_TEMP/stage-h-receipt.json"
+
+      - name: Upload verified Stage H receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kivo-mobile-stage-h-${{ inputs.source_sha }}
+          path: ${{ runner.temp }}/stage-h-receipt.json
+          if-no-files-found: error
+          retention-days: 90

@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'apps/mobile/**'
-      - '.github/workflows/mobile-stage-g.yml'
+      - '.github/workflows/**'
       - '.github/actions/**'
       - 'package.json'
       - 'package-lock.json'
@@ -13,7 +13,7 @@ on:
       - main
     paths:
       - 'apps/mobile/**'
-      - '.github/workflows/mobile-stage-g.yml'
+      - '.github/workflows/**'
       - '.github/actions/**'
       - 'package.json'
       - 'package-lock.json'
@@ -74,6 +74,12 @@ jobs:
 
       - name: ESLint
         run: npm run lint
+
+      - name: Validate Stage H controller
+        run: |
+          set -euo pipefail
+          npx --no-install eslint scripts
+          node --test scripts/stage-h.test.mjs
 
       - name: Expo Doctor
         run: npx --no-install expo-doctor
