@@ -8,6 +8,7 @@
     "start:go": "expo start --go",
     "start:go:lan": "expo start --go --lan",
     "start:go:tunnel": "expo start --go --tunnel",
+    "start:go:tunnel:headless": "EXPO_UNSTABLE_HEADLESS=1 expo start --go --tunnel",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

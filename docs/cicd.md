@@ -18,10 +18,28 @@ After `npm ci`, `npm run lint`, `npm run typecheck`, and `npx expo-doctor` pass,
 
 ```bash
 cd /home/kivo/projects/kivocafe/apps/mobile
-npm run start:go:tunnel
+npm run start:go:tunnel:headless
 ```
 
 The remote tools server is not on the iPhone's LAN, so use Expo's tunnel; no inbound firewall or SSH changes are needed. The tools server has the official helper installed outside application dependencies with `npm install --global @expo/ngrok@4.1.3` (one-time server setup). Keep the terminal open, or run inside `tmux new -s kivo-expo-go`; reattach with `tmux attach -t kivo-expo-go`. Stop with Ctrl+C when review is finished. Tunnel addresses can change after restart and should be shared only with reviewers; never run the preview with Doppler secrets injected.
+
+The Linux-only headless script uses Expo SDK 57's `EXPO_UNSTABLE_HEADLESS=1` setting to avoid starting desktop React Native DevTools on this server; it does not disable the browser sandbox. It also hides Expo's interactive QR UI. In a second terminal, from `apps/mobile`, print the current QR using the installed Expo CLI helper (no extra dependency):
+
+```bash
+node <<'NODE'
+const { join, dirname } = require('node:path');
+const cliQR = join(dirname(require.resolve('expo/package.json')), 'node_modules/@expo/cli/build/src/utils/qr.js');
+fetch('http://127.0.0.1:8081/', { headers: { 'expo-platform': 'ios', accept: 'application/expo+json' } })
+  .then(response => response.json())
+  .then(manifest => {
+    const url = `exp://${new URL(manifest.launchAsset.url).host}`;
+    console.log(url);
+    require(cliQR).printQRCode(url).print();
+  }).catch(() => { console.error('Start the Expo Go tunnel first.'); process.exitCode = 1; });
+NODE
+```
+
+The QR helper path is verified against this project's locked SDK 57 CLI. On a workstation with desktop support, `npm run start:go:tunnel` retains the normal interactive QR interface.
 
 Install/update Expo Go on the iPhone and sign in with the same Expo account as the CLI (`khalif27`; verify with `npx expo whoami`). The App Store Expo Go supports SDK 57 and requires matching CLI/app login; see [Expo's SDK 57 login notice](https://expo.dev/changelog/expo-go-57-login). Scan the terminal QR using the iPhone Camera and open Expo Go. Review the KIVO wordmark, cream/espresso/gold styling, Home, Menu, Orders, Rewards, and Profile. App icon/native splash configuration is not faithfully represented by Expo Go; native identity/signing remains an EAS-build concern.
 
